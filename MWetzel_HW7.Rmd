@@ -3,8 +3,9 @@ title: "N741 Spring 2018 - Homework 7"
 author: "Martha Wetzel"
 date: "April 10, 2018"
 output:
-  html_document: default
+  word_document: default
   pdf_document: default
+  html_document: default
 subtitle: Homework 7 - DUE WED April 11, 2018
 ---
 
@@ -96,6 +97,7 @@ library(rpart)
 library(partykit)
 library(reshape2)
 library(party)
+library(tibble)
 library(tidyverse)
 library(randomForestSRC)
 library(ggRandomForests)
@@ -385,7 +387,11 @@ Using the `party` package, we can fit a conditional classification tree using th
 
 ```{r}
 
-# put code for problem 7 here
+# look at cesd_gte16 with ctree from party
+fitallpk <- party::ctree(mcs_lt45 ~ age + female + pss_fr + 
+                           homeless + pcs + cesd, data = h1)
+class(fitallpk)
+plot(fitallpk, main = "Conditional Inference Tree for MCS < 45")
 
 ```
 
@@ -415,7 +421,18 @@ Using the code above to do recursive partitioning of MCS < 45 (`mcs_lt45`) on `a
 
 ```{r}
 
-# insert code for problem 8 here
+# Recursive partitioning of MCS < 45 on age, 
+# female, pss_fr, homeless, pcs, mcs
+LowMH <- rpart::rpart(mcs_lt45 ~ age + female + 
+                                 pss_fr + homeless + pcs + cesd,
+                               data = h1, 
+                               control = rpart.control(cp = 0.001,
+                                                       minbucket = 20))
+
+LowMH
+
+# Plot the tree
+plot(partykit::as.party(LowMH))
 
 ```
 
@@ -444,7 +461,6 @@ Using the code above, create a scatterplot of `pcs` and `cesd` where the points 
 
 ```{r}
 
-# EXTRA CREDIT - insert code here
 
 ```
 
@@ -509,7 +525,35 @@ Use the code above to fit the model and explore how well the model converges and
 
 ```{r}
 
-# put code for problem 9 here
+
+# Random Forest for the h1 dataset
+fitallrf_mcs <- randomForestSRC::rfsrc(mcs ~ age + female + 
+                                     pss_fr + homeless + pcs + cesd, 
+                                   data = h1, ntree = 100, 
+                                   tree.err=TRUE)
+# view the results
+fitallrf_mcs
+gg_e_mcs <- ggRandomForests::gg_error(fitallrf_mcs)
+plot(gg_e_mcs)
+
+# Plot the predicted MCS values
+plot(ggRandomForests::gg_rfsrc(fitallrf_mcs), alpha = 0.5)
+
+# Plot the VIMP rankins of independent variables
+plot(ggRandomForests::gg_vimp(fitallrf_mcs))
+
+# Select the variables
+varsel_mcs <- randomForestSRC::var.select(fitallrf_mcs)
+glimpse(varsel_mcs)
+
+# Save the gg_minimal_depth object for later use
+gg_md_mcs <- ggRandomForests::gg_minimal_depth(varsel_mcs)
+# Plot the object
+plot(gg_md_mcs)
+
+# Plot minimal depth v VIMP
+gg_mdVIMP_mcs <- ggRandomForests::gg_minimal_vimp(gg_md_mcs)
+plot(gg_mdVIMP_mcs)
 
 ```
 
@@ -529,20 +573,28 @@ plot(gg_v, xvar = xvar, panel = TRUE, alpha = 0.4) +
   labs(y="Predicted CESD reading", x="")
 ```
 
-### **PROBLEM 10: Create Plots of How Well Each Variable Predicts CESD***
+### **PROBLEM 10: Create Plots of How Well Each Variable Predicts MCS***
 
 Using the code above, see how well each variable predicts MCS scores given the other variables in the dataset `h1`.
 
 ```{r}
 
-# place code for problem 10 here
+#Create the variable dependence object from the random forest
+gg_v_mcs <- ggRandomForests::gg_variable(fitallrf_mcs)
+
+# Use the top ranked minimal depth variables only, plotted in minimal depth rank order
+xvar <- gg_md_mcs$topvars
+
+# Plot the variable list in a single panel plot
+plot(gg_v_mcs, xvar = xvar, panel = TRUE, alpha = 0.4) +
+  labs(y="Predicted MCS reading", x="")
 
 ```
 
 
 ---
 
-**Use R markdown to complete your homework and show all of your code and output in your final report - Turn in a PDF of your report to Canvas. Include a link to your Github repo for Homework 7**
+The code for this assignment can be found on [Github](https://github.com/mpwetzel1/N741Spring2018_Homework7)
 
 ---
 
