@@ -16,14 +16,17 @@ h1 <- helpdata %>%
 # add dichotomous variable
 # to indicate depression for
 # people with CESD scores >= 16
+# and people with mcs scores < 45
 
 h1 <- h1 %>%
-  mutate(cesd_gte16 = cesd >= 16)
+  mutate(cesd_gte16 = cesd >= 16) %>%
+  mutate(mcs_lt45 = mcs < 45)
 
-# change cesd_gte16 LOGIC variable type
+# change cesd_gte16 and mcs_lt45 LOGIC variable type
 # to numeric coded 1=TRUE and 0=FALSE
 
 h1$cesd_gte16 <- as.numeric(h1$cesd_gte16)
+h1$mcs_lt45 <- as.numeric(h1$mcs_lt45)
 
 # check final data subset h1
 summary(h1)

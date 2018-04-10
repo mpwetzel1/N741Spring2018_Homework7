@@ -1,9 +1,11 @@
 ---
 title: "N741 Spring 2018 - Homework 7"
-subtitle:  "Homework 7 - DUE WED April 11, 2018"
 author: "Melinda Higgins"
 date: "April 4, 2018"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
+subtitle: Homework 7 - DUE WED April 11, 2018
 ---
 
 ```{r setup, include=FALSE}
@@ -35,15 +37,21 @@ h1 <- helpdata %>%
 # add dichotomous variable
 # to indicate depression for
 # people with CESD scores >= 16
+# and people with mcs scores < 45
 
 h1 <- h1 %>%
-  mutate(cesd_gte16 = cesd >= 16)
+  mutate(cesd_gte16 = cesd >= 16) %>%
+  mutate(mcs_lt45 = mcs < 45)
 
-# change cesd_gte16 LOGIC variable type
+# change cesd_gte16 and mcs_lt45 LOGIC variable type
 # to numeric coded 1=TRUE and 0=FALSE
 
 h1$cesd_gte16 <- as.numeric(h1$cesd_gte16)
+h1$mcs_lt45 <- as.numeric(h1$mcs_lt45)
+
+# add a label for these 2 new variables
 attributes(h1$cesd_gte16)$label <- "Indicator of Depression"
+attributes(h1$mcs_lt45)$label <- "Indicator of Poor Mental Health"
 
 # create a function to get the label
 # label output from the attributes() function
@@ -65,21 +73,47 @@ knitr::kable(t(ldf),
 
 ## Homework 7 Assignment
 
-**SETUP** Download and run the "loadHELP.R" `R` script (included in this Github repo [https://github.com/melindahiggins2000/N741Spring2018_Homework6](https://github.com/melindahiggins2000/N741Spring2018_Homework6)) to read in the HELP Dataset "helpmkh.sav". This script also pulls out the variables you need and creates the dichotomous variable for depression `cesd_gte16`.
+**SETUP** Download and run the "loadHELP.R" `R` script (included in this Github repo [https://github.com/melindahiggins2000/N741Spring2018_Homework7](https://github.com/melindahiggins2000/N741Spring2018_Homework7)) to read in the HELP Dataset "helpmkh.sav". This script also pulls out the variables you need and creates the dichotomous variable for depression `cesd_gte16` **AND** a dichotomous variable to indicate poor mental health (`mcs_lt45`).
 
-After running this R script, you will have a data frame called `h1` you can use to do the rest of your analyses. You can also copy this code into your first R markdown code chunk to get you started on Homework 7.
+After running this R script, you will have a data frame called `h1` you can use to do the rest of your analyses. You can also copy this code into your first R markdown code chunk to get you started on Homework 7 - or begin with this R markdown file for Homework 7.
 
-For Homework 7, you will be looking at perceived social support from friends (`pss_fr`) in these subjects. 
+For Homework 7, the code is provided here for the regression tree and conditional tree and random forest models looking at depression as given by the continuous measure `cesd` and the dichotomous indicator of depression `cesd_gte16`.
+
+You can then use this code and adapt it to run through the models again looking at the mental health composite score (`mcs`) in these subjects and the dichomotous indicator or poor mental health for people with `mcs` scores < 45, which is the variable `mcs_lt45`. 
+
+### Packages needed for Homework 7
+
+* `rpart`
+* `partykit`
+* `party`
+* `tidyverse`
+* `reshape2`
+* `randomForestSRC`
+* `ggRandomForests`
 
 ```{r}
 library(rpart)
 library(partykit)
-# library(RColorBrewer)
 library(reshape2)
-# library(NHANES)
-# library(mosaic)
-# library(faraway) # skip this one
+library(party)
+library(tidyverse)
+library(randomForestSRC)
+library(ggRandomForests)
+```
 
+### Regression Tree for CESD
+
+Using the `rpart` package and the steps we demonstrated in class, the code below:
+
+* fits a regression tree to the `cesd` based on only the `mcs` scores from the `h1` dataset;
+* displays the results
+* plots the cross-validated results
+* provides a summary of the model fit
+* and plots the regression tree
+
+```{r}
+# fit a regression tree model to the cesd as the outcome
+# and using the mcs as the only predictor
 fitcesd <- rpart::rpart(cesd ~ mcs, data = h1)
 rpart::printcp(fitcesd) # Display the results
 rpart::plotcp(fitcesd) # Visualize cross-validation results
@@ -90,57 +124,172 @@ plot(fitcesd, uniform = TRUE, compress = FALSE)
 text(fitcesd, use.n = TRUE, all = TRUE, cex = 0.5)
 ```
 
+### **PROBLEM 1: Regression Tree for MCS**
 
+Using the code above, fit a regression tree model where the `mcs` is the outcome and the `cesd` is the predictor and complete the following:
+
+* fit a regression tree to the `mcs` based on only the `cesd` scores from the `h1` dataset;
+* display the results
+* plot the cross-validated results
+* provide a summary of the model fit
+* and plot the regression tree
 
 ```{r}
-# all vars except the dictomous cesd_gte16
+
+# insert code to complete Problem 1 here
+
+```
+
+### Matrix Scatterplot of Other Variables with CESD
+
+We can use the `reshape2` package to basically stack all of the other variables on top of one another and align them with the `cesd` variable and then use this "melted" dataset with the `facet_wrap` option with `ggplot()` to basically get a matrix of scatterplots showing how all of the other variables are associated with the `cesd`.
+
+I also first remove the variables I don't need for this next step and create the dataset `h1a`.
+
+```{r}
+# all vars except the dichotomous cesd_gte16 and mcs_lt45
 h1a <- h1[,1:7]
 
-# Plot panels for each covariate
+# Melt the other variables down and link to cesd
 h1m <- reshape2::melt(h1a, id.vars = "cesd")
+
+# Plot panels for each covariate
 ggplot(h1m, aes(x=cesd, y=value)) +
   geom_point(alpha=0.4)+
   scale_color_brewer(palette="Set2")+
   facet_wrap(~variable, scales="free_y", ncol=3)
+```
 
+### **PROBLEM 2: Matrix Scatterplot of Other Variables with MCS**
+
+Using the code above as a guide,swap out `mcs` for `cesd` and redo the scatterplots compared to the `mcs`. HINT: You can begin with the data subset `h1a`, but you will need to modify the code for `h1m` and for the `ggplot()` code lines.
+
+```{r}
+
+# Put code here for Problem 2
+
+```
+
+### Regression Tree for CESD with the rest of the variables
+
+Now let's see what happens when we include the rest of the variables. A "shorthand" notation used in R that can be handy is to simply put in a period "." indicating use the rest of the variables in the model.
+
+So, the line of code
+
+```
+fitall <- rpart::rpart(cesd ~ ., data = h1a)
+```
+
+basically says to fit a model for `cesd` from the rest of the variables in the dataset `h1a` which includes: 
+
+* `age`
+* `female`
+* `pss_fr`
+* `homeless`
+* `pcs`
+* `mcs`
+
+So the period "." in the model formula `cesd ~ .` part of the code above indicates that we're going to put `age`, `female`, `pss_fr`, `homeless`, `pcs`, and `mcs` into the model as predictors.
+
+But the equivalent way to define this model where you list each variable you want in the model is to use the plus `+` symbol between each variable - so you could also write this code:
+
+```
+fitall <- rpart::rpart(cesd ~ age + female + pss_fr + 
+                              homeless + pcs + mcs, 
+                              data = h1a)
+```
+
+So, let's see what the regression tree for CESD looks like if we try all of these other variables as predictors in the model.
+
+```{r}
 # fit a regression tree with all vars
 fitall <- rpart::rpart(cesd ~ ., data = h1a)
+
+# equivalent code statement without the shorthand
+# using the period for the "rest of the variables"
+# this time each variable to be included is listed
+# individually putting a plus + in between each 
+# variable added to the model
+
+fitall <- rpart::rpart(cesd ~ age + female + pss_fr + 
+                              homeless + pcs + mcs, 
+                              data = h1a)
+
 # Now let's look at fitall
 rpart::printcp(fitall) # Display the results
 rpart::plotcp(fitall) # Visualize cross-validation results
 summary(fitall) # Detailed summary of fit
 
-
 plot(fitall, uniform = TRUE, compress = FALSE, main = "Regression Tree for CESD Scores from HELP(h1) Data")
 text(fitall, use.n = TRUE, all = TRUE, cex = 0.5)
-
-# Prune the tree
-pfit <- prune(fitall, cp = fitall$cptable[which.min(fitall$cptable[, "xerror"]), "CP"])
-
-# Plot the pruned tree
-plot(pfit, uniform = TRUE, compress = FALSE, main = "Pruned Regression Tree for Ozone")
-text(pfit, use.n = TRUE, all = TRUE, cex = 0.5)
-
 ```
 
-better graphics with `party`
+### **PROBLEM 3: Regression Tree for MCS Using Rest of Variables**
+
+Using the code above as a guide, swap out `mcs` for `cesd` and redo the regression tree for `mcs` using the rest of the variables in the data subset `h1a`. 
 
 ```{r}
-library(party)
-fitallp <- party::ctree(cesd ~ ., data = h1a)
-plot(fitallp, main = "Conditional Inference Tree for CESD")
+
+# Put code here for Problem 3
 
 ```
 
+### Regression Tree for CESD Using the `party` package approach
 
-decision trees - outcome is a group or class
+The `party` package has better graphics and fits a "conditional" regression tree using the `ctree()` function. Here is the model approach for the `cesd` using the rest of the variables in the dataset `h1a`.
+
+```{r}
+fitallp <- party::ctree(cesd ~ ., data = h1a)
+plot(fitallp, main = "Conditional Inference Tree for CESD")
+```
+
+### **PROBLEM 4: Fit a Conditional Regression Tree for MCS**
+
+Using the code above, swap out `mcs` for `cesd` to fit a confitional regression tree for `mcs` predicted by the other variables in the dataset `h1a`.
+
+```{r}
+
+# put in code for problem 4
+
+```
+
+### Logistic Regression of CESD => 16 
+
+When the outcome is dichotomous or is a categorical outcome, you can fit a "decision tree" or "classification tree". One way you've already learned last week is fitting a logistic regression model. In fact, logistic regression is a supervised classification modeling approach. Let's .ee what this looks like for predicting depression (indicated by `cesd_gte16` for people with CESD scores => 16). Pay attention to which variables are significant in the resulting logistic regression model.
 
 ```{r}
 # begin with a logistic regression - depressed or not
 glm1 <- glm(cesd_gte16 ~ age + female + pss_fr + homeless + 
               pcs + mcs, data = h1)
 summary(glm1)
+```
 
+### **PROBLEM 5: Fit a Logistic Regression Model for MCS < 45**
+
+The mental component (or composite) scale of the SF36 instrument is a measure of mental health. The scores are created relative to population norms. The population norm for the `mcs` of the SF36 is 50 with a standard deviation of 10. A difference of a "half" of a standard deviation - in other words a difference of 5 points - is considered to be clinically meaningful. So, people with MCS scores greater than 55 are considered to have better than average mental health and those with MCS scores less than 45 are considered to have worse than average mental health scores. So, in the dataset `h1` above, we included an indicator variable called `mcs_lt45` where a value of 1 indicates people with MCS < 45 ("poor mental health") and a value of 0 ("normal or better than normal mental health") is for people with MCS scores => 45.
+
+Use the dataset `h1` and the code above to fit a logistic regression model for `mcs_lt45` based on the predictors of 
+
+* `age`
+* `female`
+* `pss_fr`
+* `homeless`
+* `pcs`
+* `cesd`
+
+Is this model similar to the model for `cesd_gte16` or not - what is similar? what is different?
+
+```{r}
+
+# insert code for Problem 5
+
+```
+
+### Fit a Classification Tree for CESD => 16
+
+We can use the `rpart` package again to fit a classification tree to the depression indicator `cesd_gte16`.
+
+```{r}
 fitk <- rpart::rpart(cesd_gte16 ~ age + female + pss_fr + 
                        homeless + pcs + mcs, 
                      method = "class", data = h1)
@@ -155,23 +304,50 @@ summary(fitk)
 plot(fitk, uniform = TRUE, 
      main = "Classification Tree for CESD => 16")
 text(fitk, use.n = TRUE, all = TRUE, cex = 0.8)
-# Prune the tree
-prune_fitk <- prune(fitk, cp = fitk$cptable[which.min(fitk$cptable[, "xerror"]), "CP"])
-class(prune_fitk)
+```
 
+### **PROBLEM 6: Fit a Classification Tree for MCS < 45**
+
+Use the `rpart` package to fit a classification tree to the poor mental health indicator `mcs_lt45`.
+
+```{r}
+
+# put code for problem 6 here
+
+```
+
+### Fit a Conditional Classification Tree for CESD => 16 
+
+Using the `party` package, we can fit a conditional classification tree using the `ctree()` function. Let's do one for the indicator of depression `cesd_gte16` given the other variables in the `h1` dataset: `age`, `female`, `pss_fr`, `homeless`, `pcs`, `mcs`. 
+
+```{r}
 # look at cesd_gte16 with ctree from party
-
-h1b <- h1 %>%
-  select(age, female, pss_fr, homeless, pcs, mcs, cesd_gte16)
-fitallpk <- party::ctree(cesd_gte16 ~ ., data = h1b)
+fitallpk <- party::ctree(cesd_gte16 ~ age + female + pss_fr + 
+                           homeless + pcs + mcs, data = h1)
 class(fitallpk)
 plot(fitallpk, main = "Conditional Inference Tree for CESD => 16")
+```
 
-# Recursive partitioning of CESD on age, 
+### **PROBLEM 7: Fit a Conditional Classification Tree for MCS < 45**
+
+Using the `party` package, we can fit a conditional classification tree using the `ctree()` function. Let's do one for the indicator of depression `mcs_lt45` given the other variables in the `h1` dataset: `age`, `female`, `pss_fr`, `homeless`, `pcs`, `cesd`. 
+
+```{r}
+
+# put code for problem 7 here
+
+```
+
+### Recursive Partitioning of Classification Tree for CESD => 16
+
+Here is the code doing the recursive partitioning of CESD => 16 on `age`, `female`, `pss_fr`, `homeless`, `pcs`, `mcs`. We're also using the `partykit` package to get prettier graphics for this classification tree.
+
+```{r}
+# Recursive partitioning of CESD => 16 on age, 
 # female, pss_fr, homeless, pcs, mcs
 whoIsDepressed <- rpart::rpart(cesd_gte16 ~ age + female + 
                                  pss_fr + homeless + pcs + mcs,
-                               data = h1b, 
+                               data = h1, 
                                control = rpart.control(cp = 0.001,
                                                        minbucket = 20))
 
@@ -180,12 +356,28 @@ whoIsDepressed
 library(partykit)
 # Plot the tree
 plot(partykit::as.party(whoIsDepressed))
+```
 
+### **PROBLEM 8: Recursive Partitioning of Classification Tree for MCS < 45**
+
+Using the code above to do recursive partitioning of MCS < 45 (`mcs_lt45`) on `age`, `female`, `pss_fr`, `homeless`, `pcs`, `cesd`. Also use the `partykit` package to get prettier graphics for this classification tree.
+
+```{r}
+
+# insert code for problem 8 here
+
+```
+
+### Scatterplot of recursive partitions for CESD => 16 for MCS and PCS
+
+The code below creates a scatterplot of `pcs` and `mcs` where the points are colored by the indication of depression `cesd_gte16`. The lines have been inserted showing the dividing lines that best separate subjects with depression (CESD => 16) from those without depression (CESD < 16).
+
+```{r}
 # EXTRA CREDIT
 # Graph as partition
 # using the break points shown from the
 # conditional tree
-ggplot(data = h1b, aes(x = mcs, y = pcs)) +
+ggplot(data = h1, aes(x = mcs, y = pcs)) +
   geom_count(aes(color = cesd_gte16), alpha = 0.5) +
   geom_vline(xintercept = 50.024) +
   geom_vline(xintercept = 41.164) +
@@ -193,31 +385,47 @@ ggplot(data = h1b, aes(x = mcs, y = pcs)) +
   geom_segment(x = 37.054, xend = 0, y = 58.164, yend = 58.164) +
   annotate("rect", xmin = 0, xmax = 100, ymin = 0, ymax = 100, fill = "blue", alpha = 0.1) +
   ggtitle("CESD => 16 Partitioned By MCS and PCS - Dark Circles Not Depressed")
+```
 
+### **EXTRA CREDIT Scatterplot of recursive partitions for MCS < 45 for PCS and CESD**
+
+Using the code above, create a scatterplot of `pcs` and `cesd` where the points are colored by the indication of poor mental health `mcs_lt45`. Play with the `geom_vline()` or `geom_hline()` or `geom_segment()` to insert lines that best separate subjects with poor mental health (MCS < 45) from those with normal to better than average mental health (MCS > 45).
+
+```{r}
+
+# EXTRA CREDIT - insert code here
 
 ```
 
-random forests approach
+### Random Forest Model for CESD
+
+Now let's use a Random Forest approach for modeling the CESD by the other variables in the dataset: 
+
+* `age`
+* `female`
+* `pss_fr`
+* `homeless`
+* `pcs`
+* `mcs`
+
+And using the code below, we'll explore how well the model converges and how well it does predicting CESD scores.
 
 ```{r}
-# library(RColorBrewer)
-# library(plot3D)
-# library(parallel)
-library(randomForestSRC)
-library(ggRandomForests)
-
-h1a <- as.data.frame(h1a)
+h1 <- as.data.frame(h1)
 set.seed(131)
-# Random Forest for the ozone dataset
-fitallrf <- randomForestSRC::rfsrc(cesd ~ ., 
-                                   data = h1a, ntree = 100, 
+# Random Forest for the h1 dataset
+fitallrf <- randomForestSRC::rfsrc(cesd ~ age + female + 
+                                     pss_fr + homeless + pcs + mcs, 
+                                   data = h1, ntree = 100, 
                                    tree.err=TRUE)
 # view the results
 fitallrf
 gg_e <- ggRandomForests::gg_error(fitallrf)
 plot(gg_e)
+
 # Plot the predicted cesd values
 plot(ggRandomForests::gg_rfsrc(fitallrf), alpha = 0.5)
+
 # Plot the VIMP rankins of independent variables
 plot(ggRandomForests::gg_vimp(fitallrf))
 
@@ -233,7 +441,32 @@ plot(gg_md)
 # Plot minimal depth v VIMP
 gg_mdVIMP <- ggRandomForests::gg_minimal_vimp(gg_md)
 plot(gg_mdVIMP)
+```
 
+### **PROBLEM 9: Fit a Random Forest Model for MCS**
+
+Now let's use a Random Forest approach for modeling the MCS by the other variables in the dataset: 
+
+* `age`
+* `female`
+* `pss_fr`
+* `homeless`
+* `pcs`
+* `cesd`
+
+Use the code above to fit the model and explore how well the model converges and how well it does predicting MCS scores.
+
+```{r}
+
+# put code for problem 9 here
+
+```
+
+### Create Plots of How Well Each Variable Predicts CESD
+
+Using the code below, we can see how well each variable predicts CESD scores.
+
+```{r}
 #Create the variable dependence object from the random forest
 gg_v <- ggRandomForests::gg_variable(fitallrf)
 
@@ -244,6 +477,17 @@ xvar <- gg_md$topvars
 plot(gg_v, xvar = xvar, panel = TRUE, alpha = 0.4) +
   labs(y="Predicted CESD reading", x="")
 ```
+
+### **PROBLEM 10: Create Plots of How Well Each Variable Predicts CESD***
+
+Using the code above, see how well each variable predicts MCS scores given the other variables in the dataset `h1`.
+
+```{r}
+
+# place code for problem 10 here
+
+```
+
 
 ---
 
